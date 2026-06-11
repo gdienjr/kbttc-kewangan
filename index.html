@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Penyata Kewangan KBTTC</title>
+<style>
+  :root {
+    --green: #1a7a4a;
+    --green-light: #e8f5ee;
+    --green-mid: #2d9e63;
+    --red-light: #fdecea;
+    --red: #c0392b;
+    --gray: #6b7280;
+    --gray-light: #f3f4f6;
+    --border: #e5e7eb;
+    --text: #111827;
+    --text-muted: #6b7280;
+    --white: #ffffff;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: var(--text); min-height: 100vh; }
+
+  /* Header */
+  .app-header { background: var(--green); color: white; padding: 16px 20px 14px; position: sticky; top: 0; z-index: 100; }
+  .app-header h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.01em; }
+  .app-header p { font-size: 12px; opacity: 0.75; margin-top: 2px; }
+
+  /* Main */
+  .container { max-width: 480px; margin: 0 auto; padding: 16px 14px 80px; }
+
+  /* Cards */
+  .card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 12px; overflow: hidden; box-shadow: var(--shadow); }
+  .card-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--gray-light); }
+  .card-header-left { display: flex; align-items: center; gap: 8px; }
+  .card-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .icon-green { background: var(--green-light); color: var(--green); }
+  .icon-red { background: var(--red-light); color: var(--red); }
+  .icon-blue { background: #eff6ff; color: #2563eb; }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .card-body { padding: 12px 16px; }
+
+  /* URL setup */
+  .url-input-group { display: flex; gap: 8px; }
+  .url-input-group input { flex: 1; font-size: 12px; }
+  .connected-pill { display: inline-flex; align-items: center; gap: 5px; background: var(--green-light); color: var(--green); font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 20px; margin-top: 8px; }
+  .dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; }
+
+  /* Month selector */
+  .month-card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); padding: 12px 16px; margin-bottom: 12px; display: flex; gap: 10px; align-items: center; box-shadow: var(--shadow); }
+  .month-card select { flex: 1; font-size: 14px; font-weight: 500; }
+  .month-card .icon-btn { width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--border); background: var(--gray-light); color: var(--text-muted); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .month-card .icon-btn:hover { background: var(--green-light); color: var(--green); border-color: var(--green); }
+
+  /* Item rows */
+  .item-row { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .item-row:last-of-type { border-bottom: none; }
+  .item-num { font-size: 12px; color: var(--text-muted); width: 18px; text-align: center; flex-shrink: 0; }
+  .item-row input[type="text"] { flex: 1; border: none; background: transparent; font-size: 13px; color: var(--text); outline: none; padding: 4px 0; }
+  .item-row input[type="text"]:focus { color: var(--green); }
+  .item-row input[type="number"] { width: 90px; border: none; background: var(--gray-light); border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--text); text-align: right; padding: 5px 8px; outline: none; flex-shrink: 0; }
+  .item-row input[type="number"]:focus { background: var(--green-light); color: var(--green); }
+  .del-btn { width: 26px; height: 26px; border-radius: 6px; border: none; background: transparent; color: #d1d5db; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1; }
+  .del-btn:hover { background: var(--red-light); color: var(--red); }
+  .add-row { display: flex; align-items: center; gap: 8px; padding: 8px 0 2px; cursor: pointer; color: var(--text-muted); font-size: 13px; border: none; background: transparent; width: 100%; }
+  .add-row:hover { color: var(--green); }
+
+  /* Baki */
+  .baki-total { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: var(--green); color: white; border-radius: var(--radius); margin-bottom: 12px; box-shadow: var(--shadow); }
+  .baki-total .label { font-size: 13px; opacity: 0.85; }
+  .baki-total .amount { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .baki-total .amount.neg { color: #fca5a5; }
+
+  /* Tangan rows */
+  .tangan-row { display: flex; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .tangan-row:last-of-type { border-bottom: none; }
+  .tangan-bullet { font-size: 12px; color: var(--text-muted); width: 14px; flex-shrink: 0; }
+  .tangan-row input[type="text"] { flex: 1; border: none; background: transparent; font-size: 13px; color: var(--text); outline: none; padding: 4px 0; }
+  .tangan-row input[type="number"] { width: 90px; border: none; background: var(--gray-light); border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--text); text-align: right; padding: 5px 8px; outline: none; flex-shrink: 0; }
+
+  /* Buttons */
+  button, select, input { font-family: inherit; }
+  select { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; background: var(--white); color: var(--text); cursor: pointer; outline: none; }
+  select:focus { border-color: var(--green); }
+  input[type="text"], input[type="number"] { border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font-size: 14px; color: var(--text); outline: none; width: 100%; }
+  input[type="text"]:focus, input[type="number"]:focus { border-color: var(--green); }
+
+  .btn { border: none; border-radius: 8px; padding: 11px 18px; font-size: 14px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: opacity 0.15s; }
+  .btn:active { opacity: 0.8; }
+  .btn-primary { background: var(--green); color: white; }
+  .btn-primary:hover { background: var(--green-mid); }
+  .btn-outline { background: var(--white); color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:hover { background: var(--gray-light); }
+  .btn-block { width: 100%; justify-content: center; }
+
+  /* Bottom action bar */
+  .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--white); border-top: 1px solid var(--border); padding: 12px 16px; display: flex; gap: 10px; max-width: 480px; margin: 0 auto; }
+  .bottom-bar .btn { flex: 1; }
+
+  /* Toast */
+  #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(10px); background: #111827; color: white; font-size: 13px; padding: 10px 18px; border-radius: 20px; white-space: nowrap; opacity: 0; transition: all 0.25s; pointer-events: none; z-index: 999; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Loading */
+  #loading { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 998; justify-content: center; align-items: center; }
+  #loading.show { display: flex; }
+  .loading-box { background: white; border-radius: 14px; padding: 24px 32px; text-align: center; font-size: 14px; color: var(--text); }
+  .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 10px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Preview Modal */
+  #preview-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 997; overflow-y: auto; padding: 20px 14px; }
+  #preview-modal.show { display: block; }
+  .modal-card { background: white; border-radius: var(--radius); max-width: 480px; margin: 0 auto; overflow: hidden; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--border); background: var(--green); color: white; }
+  .modal-header h2 { font-size: 14px; font-weight: 600; }
+  .modal-close { background: rgba(255,255,255,0.2); border: none; color: white; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+  .modal-body { padding: 16px 18px; }
+  .penyata-title { text-align: center; font-size: 14px; font-weight: 700; margin-bottom: 14px; color: var(--text); }
+  .penyata-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 10px; }
+  .penyata-table th { background: var(--gray-light); padding: 7px 8px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); border-bottom: 2px solid var(--border); }
+  .penyata-table th.right { text-align: right; }
+  .penyata-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .penyata-table td.right { text-align: right; font-variant-numeric: tabular-nums; }
+  .penyata-table tr.total-row td { font-weight: 600; background: var(--gray-light); }
+  .penyata-table tr.baki-row td { font-weight: 700; background: var(--green-light); color: var(--green); font-size: 13px; }
+  .tangan-section { margin-top: 10px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .tangan-header { background: var(--gray-light); padding: 7px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+  .tangan-item { display: flex; justify-content: space-between; padding: 7px 10px; border-top: 1px solid var(--border); font-size: 13px; }
+  .modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+  .modal-footer .btn { flex: 1; }
+
+  /* Responsive */
+  @media (min-width: 480px) {
+    .bottom-bar { left: 50%; right: auto; width: 480px; transform: translateX(-50%); border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <h1>Penyata Kewangan KBTTC</h1>
+  <p id="header-sub">Sila sambungkan ke Google Sheets</p>
+</div>
+
+<div id="loading"><div class="loading-box"><div class="spinner"></div>Sedang memproses...</div></div>
+<div id="toast"></div>
+
+<div id="preview-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 id="modal-title">Pratonton Penyata</h2>
+      <button class="modal-close" onclick="closePreview()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closePreview()">Tutup</button>
+      <button class="btn btn-primary" onclick="saveToSheet()">☁ Simpan ke Sheets</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Google Sheets URL -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-icon icon-blue">🔗</div>
+        <span class="card-title">Google Sheets</span>
+      </div>
+      <button class="btn btn-outline" style="padding:5px 10px; font-size:12px;" onclick="toggleUrlSetup()">
+        <span id="url-toggle-label">Tetapan</span>
+      </button>
+    </div>
+    <div class="card-body" id="url-setup-body">
+      <div style="margin-bottom:10px;">
+        <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:5px;">URL Google Apps Script</label>
+        <div class="url-input-group">
+          <input type="text" id="script-url" placeholder="https://script.google.com/macros/s/..." style="font-size:12px;">
+          <button class="btn btn-primary" style="padding:9px 14px; white-space:nowrap;" onclick="saveUrl()">Simpan</button>
+        </div>
+      </div>
+      <div id="url-status"></div>
+    </div>
+  </div>
+
+  <!-- Bulan & Tahun -->
+  <div class="month-card">
+    <select id="bulan" onchange="onMonthChange()">
+      <option>JAN</option><option>FEB</option><option>MAC</option><option>APR</option>
+      <option>MEI</option><option selected>JUN</option><option>JUL</option><option>OGOS</option>
+      <option>SEP</option><option>OKT</option><option>NOV</option><option>DIS</option>
+    </select>
+    <select id="tahun" onchange="onMonthChange()">
+      <option>2025</option><option selected>2026</option><option>2027</option><option>2028</option>
+    </select>
+    <button class="icon-btn" onclick="loadFromSheet()" title="Muat data dari Google Sheets">
+      ↻
+    </button>
+  </div>
+
+  <!-- Kemasukan -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-icon icon-green">↓</div>
+        <span class="card-title">Kemasukan</span>
+      </div>
+      <span id="total-masuk" style="font-size:13px; font-weight:600; color:var(--green);">RM 0.00</span>
+    </div>
+    <div class="card-body">
+      <div id="masuk-list"></div>
+      <button class="add-row" onclick="addItem('masuk')">＋ Tambah kemasukan</button>
+    </div>
+  </div>
+
+  <!-- Keluaran -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-icon icon-red">↑</div>
+        <span class="card-title">Keluaran</span>
+      </div>
+      <span id="total-keluar" style="font-size:13px; font-weight:600; color:var(--red);">RM 0.00</span>
+    </div>
+    <div class="card-body">
+      <div id="keluar-list"></div>
+      <button class="add-row" onclick="addItem('keluar')">＋ Tambah keluaran</button>
+    </div>
+  </div>
+
+  <!-- Baki -->
+  <div class="baki-total">
+    <div>
+      <div class="label">Baki Semasa</div>
+      <div style="font-size:11px; opacity:0.7; margin-top:2px;" id="baki-month"></div>
+    </div>
+    <div class="amount" id="baki-val">RM 0.00</div>
+  </div>
+
+  <!-- Di Tangan -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-icon icon-blue">👤</div>
+        <span class="card-title">Di Tangan</span>
+      </div>
+      <span id="total-tangan" style="font-size:12px; color:var(--text-muted);">RM 0.00</span>
+    </div>
+    <div class="card-body">
+      <div id="tangan-list"></div>
+      <button class="add-row" onclick="addTangan()">＋ Tambah pemegang</button>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- Bottom Action Bar -->
+<div class="bottom-bar">
+  <button class="btn btn-outline" onclick="showPreview()">👁 Pratonton</button>
+  <button class="btn btn-primary" onclick="saveToSheet()">☁ Simpan ke Sheets</button>
+</div>
+
+<script>
+let masuk = [
+  { label: 'Baki dari bulan lepas', amt: '' },
+  { label: 'Kutipan Yuran Bulan', amt: '' },
+  { label: 'Tabung walk in', amt: '' },
+  { label: 'Sewa dewan', amt: '' },
+  { label: 'Yuran game', amt: '' },
+];
+let keluar = [
+  { label: 'Bil Letrik', amt: '' },
+  { label: 'Bil Air', amt: '' },
+  { label: 'Belanja hadiah game', amt: '' },
+  { label: 'Bola game', amt: '' },
+];
+let tangan = [
+  { nama: 'Sudin', amt: '' },
+  { nama: 'Sabri', amt: '' },
+];
+
+const STORAGE_KEY = 'kbttc_script_url';
+
+function fmt(n) { return 'RM ' + parseFloat(n || 0).toFixed(2); }
+function fmtN(n) { return parseFloat(n || 0).toFixed(2); }
+function sumArr(arr) { return arr.reduce((s, x) => s + parseFloat(x.amt || 0), 0); }
+function getUrl() { return localStorage.getItem(STORAGE_KEY) || ''; }
+
+// URL setup
+function saveUrl() {
+  const url = document.getElementById('script-url').value.trim();
+  if (!url.startsWith('https://script.google.com')) {
+    showToast('URL tidak sah. Semak semula.'); return;
+  }
+  localStorage.setItem(STORAGE_KEY, url);
+  updateUrlStatus(url);
+  showToast('✓ URL disimpan');
+}
+
+function updateUrlStatus(url) {
+  const el = document.getElementById('url-status');
+  const sub = document.getElementById('header-sub');
+  if (url) {
+    el.innerHTML = '<div class="connected-pill"><div class="dot"></div>Disambung ke Google Sheets</div>';
+    sub.textContent = 'Disambung • Data akan disimpan ke Google Sheets';
+    sub.style.color = 'rgba(255,255,255,0.9)';
+  } else {
+    el.innerHTML = '';
+    sub.textContent = 'Sila sambungkan ke Google Sheets';
+  }
+}
+
+function toggleUrlSetup() {
+  const body = document.getElementById('url-setup-body');
+  const lbl = document.getElementById('url-toggle-label');
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? 'block' : 'none';
+  lbl.textContent = hidden ? 'Tutup' : 'Tetapan';
+}
+
+function onMonthChange() {
+  const b = document.getElementById('bulan').value;
+  const t = document.getElementById('tahun').value;
+  document.getElementById('baki-month').textContent = b + ' ' + t;
+}
+
+// Render
+function renderAll() {
+  renderList('masuk', masuk);
+  renderList('keluar', keluar);
+  renderTangan();
+  updateTotals();
+}
+
+function renderList(type, arr) {
+  const el = document.getElementById(type + '-list');
+  el.innerHTML = '';
+  arr.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = `
+      <span class="item-num">${i + 1}</span>
+      <input type="text" placeholder="Keterangan" value="${escHtml(item.label)}"
+        oninput="updateLabel('${type}',${i},this.value)">
+      <input type="number" placeholder="0.00" step="0.01" min="0" value="${item.amt}"
+        oninput="updateAmt('${type}',${i},this.value)">
+      <button class="del-btn" onclick="removeItem('${type}',${i})" aria-label="Padam">✕</button>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function renderTangan() {
+  const el = document.getElementById('tangan-list');
+  el.innerHTML = '';
+  tangan.forEach((t, i) => {
+    const row = document.createElement('div');
+    row.className = 'tangan-row';
+    row.innerHTML = `
+      <span class="tangan-bullet">*</span>
+      <input type="text" placeholder="Nama pemegang" value="${escHtml(t.nama)}"
+        oninput="tangan[${i}].nama=this.value">
+      <input type="number" placeholder="0.00" step="0.01" min="0" value="${t.amt}"
+        oninput="tangan[${i}].amt=this.value; updateTotals()">
+      <button class="del-btn" onclick="removeTangan(${i})" aria-label="Padam">✕</button>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function updateLabel(type, i, v) { (type==='masuk'?masuk:keluar)[i].label = v; }
+function updateAmt(type, i, v) { (type==='masuk'?masuk:keluar)[i].amt = v; updateTotals(); }
+
+function addItem(type) {
+  (type==='masuk'?masuk:keluar).push({ label:'', amt:'' });
+  renderList(type, type==='masuk'?masuk:keluar);
+  updateTotals();
+  // Focus last input
+  setTimeout(() => {
+    const rows = document.querySelectorAll(`#${type}-list .item-row`);
+    if (rows.length) rows[rows.length-1].querySelector('input[type="text"]').focus();
+  }, 50);
+}
+
+function removeItem(type, i) {
+  (type==='masuk'?masuk:keluar).splice(i,1);
+  renderList(type, type==='masuk'?masuk:keluar);
+  updateTotals();
+}
+
+function addTangan() {
+  tangan.push({ nama:'', amt:'' });
+  renderTangan();
+}
+
+function removeTangan(i) {
+  tangan.splice(i,1);
+  renderTangan();
+  updateTotals();
+}
+
+function updateTotals() {
+  const tm = sumArr(masuk);
+  const tk = sumArr(keluar);
+  const baki = tm - tk;
+  const tt = sumArr(tangan);
+  document.getElementById('total-masuk').textContent = fmt(tm);
+  document.getElementById('total-keluar').textContent = fmt(tk);
+  document.getElementById('baki-val').textContent = fmt(baki);
+  document.getElementById('baki-val').className = 'amount' + (baki < 0 ? ' neg' : '');
+  document.getElementById('total-tangan').textContent = fmt(tt);
+}
+
+// Google Sheets
+async function saveToSheet() {
+  const url = getUrl();
+  if (!url) { showToast('Sila masukkan URL Apps Script dahulu'); return; }
+  const bulan = document.getElementById('bulan').value;
+  const tahun = document.getElementById('tahun').value;
+  const totalMasuk = sumArr(masuk);
+  const totalKeluar = sumArr(keluar);
+  const baki = totalMasuk - totalKeluar;
+  closePreview();
+  setLoading(true);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      body: JSON.stringify({ action:'save', bulan, tahun, masuk, keluar, tangan, totalMasuk, totalKeluar, baki }),
+    });
+    const data = await res.json();
+    if (data.success) showToast('✓ Disimpan ke sheet ' + data.sheetName);
+    else showToast('Ralat: ' + (data.error || 'Cuba semula'));
+  } catch(e) {
+    showToast('Gagal sambung. Semak URL & internet.');
+  }
+  setLoading(false);
+}
+
+async function loadFromSheet() {
+  const url = getUrl();
+  if (!url) { showToast('Sila masukkan URL Apps Script dahulu'); return; }
+  const bulan = document.getElementById('bulan').value;
+  const tahun = document.getElementById('tahun').value;
+  setLoading(true);
+  try {
+    const res = await fetch(`${url}?action=load&bulan=${bulan}&tahun=${tahun}`);
+    const data = await res.json();
+    if (data.success) {
+      if (data.masuk && data.masuk.length) masuk = data.masuk;
+      if (data.keluar && data.keluar.length) keluar = data.keluar;
+      if (data.tangan && data.tangan.length) tangan = data.tangan;
+      renderAll();
+      showToast('✓ Data ' + bulan + tahun + ' dimuatkan');
+    } else {
+      showToast('Tiada data untuk ' + bulan + tahun);
+    }
+  } catch(e) {
+    showToast('Gagal sambung. Semak URL & internet.');
+  }
+  setLoading(false);
+}
+
+// Preview
+function showPreview() {
+  const bulan = document.getElementById('bulan').value;
+  const tahun = document.getElementById('tahun').value;
+  const tm = sumArr(masuk), tk = sumArr(keluar), baki = tm - tk;
+  document.getElementById('modal-title').textContent = `Penyata ${bulan} ${tahun}`;
+  const maxLen = Math.max(masuk.length, keluar.length);
+  let rows = '';
+  for (let i = 0; i < maxLen; i++) {
+    const m = masuk[i] || { label:'', amt:'' };
+    const k = keluar[i] || { label:'', amt:'' };
+    rows += `<tr>
+      <td>${m.label ? (i+1)+'. '+m.label : ''}</td>
+      <td class="right">${m.amt ? fmtN(m.amt) : ''}</td>
+      <td>${k.label ? (i+1)+'. '+k.label : ''}</td>
+      <td class="right">${k.amt ? fmtN(k.amt) : ''}</td>
+    </tr>`;
+  }
+  const tanganHtml = tangan.filter(t => t.nama || t.amt).map(t =>
+    `<div class="tangan-item"><span>* ${t.nama}</span><span>RM ${fmtN(t.amt)}</span></div>`
+  ).join('');
+  document.getElementById('modal-body').innerHTML = `
+    <div class="penyata-title">Penyata Kewangan KBTTC<br>${bulan} ${tahun}</div>
+    <table class="penyata-table">
+      <thead><tr>
+        <th>Kemasukan</th><th class="right">RM</th>
+        <th>Keluaran</th><th class="right">RM</th>
+      </tr></thead>
+      <tbody>
+        ${rows}
+        <tr class="total-row">
+          <td>Jumlah</td><td class="right">${fmtN(tm)}</td>
+          <td>Jumlah</td><td class="right">${fmtN(tk)}</td>
+        </tr>
+        <tr class="baki-row">
+          <td colspan="2">Baki: RM ${fmtN(baki)}</td><td colspan="2"></td>
+        </tr>
+      </tbody>
+    </table>
+    ${tanganHtml ? `<div class="tangan-section"><div class="tangan-header">Di tangan</div>${tanganHtml}</div>` : ''}
+  `;
+  document.getElementById('preview-modal').classList.add('show');
+}
+
+function closePreview() {
+  document.getElementById('preview-modal').classList.remove('show');
+}
+
+// UI helpers
+function setLoading(s) {
+  document.getElementById('loading').className = s ? 'show' : '';
+}
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Init
+const savedUrl = getUrl();
+if (savedUrl) {
+  document.getElementById('script-url').value = savedUrl;
+  updateUrlStatus(savedUrl);
+  document.getElementById('url-setup-body').style.display = 'none';
+  document.getElementById('url-toggle-label').textContent = 'Tetapan';
+}
+onMonthChange();
+renderAll();
+</script>
+</body>
+</html>
