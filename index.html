@@ -264,13 +264,34 @@
   <button class="btn btn-primary" onclick="saveToSheet()">☁ Simpan ke Sheets</button>
 </div>
 
+<!-- Add Popup -->
+<div id="add-popup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:999;align-items:flex-end;justify-content:center;">
+  <div style="background:var(--white);border-radius:16px 16px 0 0;padding:20px 20px 32px;width:100%;max-width:480px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);" id="popup-label">Tambah nilai</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Jumlah semasa: <span id="popup-current" style="font-weight:600;color:var(--green);">RM 0.00</span></div>
+      </div>
+      <button onclick="closeAddPopup()" style="background:var(--gray-light);border:none;border-radius:8px;width:32px;height:32px;font-size:18px;cursor:pointer;color:var(--text-muted);">✕</button>
+    </div>
+    <input type="number" id="popup-input" placeholder="Masukkan amaun..." step="0.01" min="0"
+      style="width:100%;font-size:20px;text-align:center;padding:14px;border:2px solid var(--border);border-radius:10px;margin-bottom:14px;outline:none;"
+      onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--border)'"
+      onkeydown="if(event.key==='Enter')confirmAdd()">
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeAddPopup()" style="flex:1;padding:13px;border-radius:10px;border:1px solid var(--border);background:var(--white);font-size:14px;font-weight:500;cursor:pointer;">Batal</button>
+      <button onclick="confirmAdd()" style="flex:2;padding:13px;border-radius:10px;border:none;background:var(--green);color:white;font-size:14px;font-weight:600;cursor:pointer;">Tambah ✓</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let masuk = [
   { label: 'Baki dari bulan lepas', amt: '' },
-  { label: 'Kutipan Yuran Bulan', amt: '' },
-  { label: 'Tabung walk in', amt: '' },
-  { label: 'Sewa dewan', amt: '' },
-  { label: 'Yuran game', amt: '' },
+  { label: 'Kutipan Yuran Bulan', amt: '', yuranLink: true },
+  { label: 'Tabung walk in', amt: '', accumulate: true },
+  { label: 'Sewa dewan', amt: '', accumulate: true },
+  { label: 'Yuran game', amt: '', accumulate: true },
 ];
 let keluar = [
   { label: 'Bil Letrik', amt: '' },
@@ -322,10 +343,47 @@ function toggleUrlSetup() {
   lbl.textContent = hidden ? 'Tutup' : 'Tetapan';
 }
 
-function onMonthChange() {
+function getPrevMonth(bulan, tahun) {
+  const months = ['JAN','FEB','MAC','APR','MEI','JUN','JUL','OGOS','SEP','OKT','NOV','DIS'];
+  const idx = months.indexOf(bulan);
+  if (idx === 0) return { bulan: 'DIS', tahun: String(parseInt(tahun) - 1) };
+  return { bulan: months[idx - 1], tahun: tahun };
+}
+
+async function onMonthChange() {
   const b = document.getElementById('bulan').value;
   const t = document.getElementById('tahun').value;
   document.getElementById('baki-month').textContent = b + ' ' + t;
+
+  const url = getUrl();
+  if (!url) return;
+
+  const prev = getPrevMonth(b, t);
+  try {
+    const res = await fetch(`${url}?action=load&bulan=${prev.bulan}&tahun=${prev.tahun}`);
+    const data = await res.json();
+    if (data.success && data.masuk && data.masuk.length) {
+      // Cari baki dari sheet bulan lepas (simpan dalam Apps Script sebagai nilai BAKI)
+      const prevBaki = await fetchPrevBaki(url, prev.bulan, prev.tahun);
+      if (prevBaki !== null) {
+        masuk[0].amt = prevBaki.toFixed(2);
+        renderList('masuk', masuk);
+        updateTotals();
+        showToast('✓ Baki ' + prev.bulan + prev.tahun + ': RM ' + prevBaki.toFixed(2) + ' dimuatkan');
+      }
+    }
+  } catch(e) {
+    // Senyap je kalau gagal — user boleh isi manual
+  }
+}
+
+async function fetchPrevBaki(url, bulan, tahun) {
+  try {
+    const res = await fetch(`${url}?action=getBaki&bulan=${bulan}&tahun=${tahun}`);
+    const data = await res.json();
+    if (data.success) return parseFloat(data.baki) || 0;
+  } catch(e) {}
+  return null;
 }
 
 // Render
@@ -342,14 +400,42 @@ function renderList(type, arr) {
   arr.forEach((item, i) => {
     const row = document.createElement('div');
     row.className = 'item-row';
-    row.innerHTML = `
-      <span class="item-num">${i + 1}</span>
-      <input type="text" placeholder="Keterangan" value="${escHtml(item.label)}"
-        oninput="updateLabel('${type}',${i},this.value)">
-      <input type="number" placeholder="0.00" step="0.01" min="0" value="${item.amt}"
-        oninput="updateAmt('${type}',${i},this.value)">
-      <button class="del-btn" onclick="removeItem('${type}',${i})" aria-label="Padam">✕</button>
-    `;
+    if (item.yuranLink) {
+      row.innerHTML = `
+        <span class="item-num">${i + 1}</span>
+        <input type="text" placeholder="Keterangan" value="${escHtml(item.label)}"
+          oninput="updateLabel('${type}',${i},this.value)">
+        <div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">
+          <input type="number" placeholder="0.00" step="0.01" min="0" value="${item.amt}"
+            oninput="updateAmt('${type}',${i},this.value)" style="width:82px;">
+          <button onclick="fetchYuran(${i})" title="Ambil dari kbttc-yuran"
+            style="width:30px;height:36px;border-radius:6px;border:1px solid var(--border);background:var(--green-light);color:var(--green);font-size:14px;cursor:pointer;flex-shrink:0;" id="yuran-fetch-btn">⟳</button>
+        </div>
+        <button class="del-btn" onclick="removeItem('${type}',${i})" aria-label="Padam">✕</button>
+      `;
+    } else if (item.accumulate) {
+      row.innerHTML = `
+        <span class="item-num">${i + 1}</span>
+        <input type="text" placeholder="Keterangan" value="${escHtml(item.label)}"
+          oninput="updateLabel('${type}',${i},this.value)">
+        <div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">
+          <input type="number" placeholder="0.00" step="0.01" min="0" value="${item.amt}"
+            oninput="updateAmt('${type}',${i},this.value)" style="width:82px;">
+          <button onclick="openAddPopup('${type}',${i})" title="Tambah nilai"
+            style="width:30px;height:36px;border-radius:6px;border:1px solid var(--border);background:#eff6ff;color:#2563eb;font-size:18px;font-weight:600;cursor:pointer;flex-shrink:0;line-height:1;">+</button>
+        </div>
+        <button class="del-btn" onclick="removeItem('${type}',${i})" aria-label="Padam">✕</button>
+      `;
+    } else {
+      row.innerHTML = `
+        <span class="item-num">${i + 1}</span>
+        <input type="text" placeholder="Keterangan" value="${escHtml(item.label)}"
+          oninput="updateLabel('${type}',${i},this.value)">
+        <input type="number" placeholder="0.00" step="0.01" min="0" value="${item.amt}"
+          oninput="updateAmt('${type}',${i},this.value)">
+        <button class="del-btn" onclick="removeItem('${type}',${i})" aria-label="Padam">✕</button>
+      `;
+    }
     el.appendChild(row);
   });
 }
@@ -436,6 +522,62 @@ function updateTotals() {
   document.getElementById('baki-val').textContent = fmt(baki);
   document.getElementById('baki-val').className = 'amount' + (baki < 0 ? ' neg' : '');
   document.getElementById('total-tangan').textContent = fmt(tt);
+}
+
+// Accumulate popup
+let _popupType = null, _popupIdx = null;
+function openAddPopup(type, idx) {
+  _popupType = type; _popupIdx = idx;
+  const item = (type === 'masuk' ? masuk : keluar)[idx];
+  document.getElementById('popup-label').textContent = '+ Tambah ke: ' + item.label;
+  document.getElementById('popup-current').textContent = fmt(item.amt || 0);
+  document.getElementById('popup-input').value = '';
+  const popup = document.getElementById('add-popup');
+  popup.style.display = 'flex';
+  setTimeout(() => document.getElementById('popup-input').focus(), 100);
+}
+function closeAddPopup() {
+  document.getElementById('add-popup').style.display = 'none';
+  _popupType = null; _popupIdx = null;
+}
+function confirmAdd() {
+  const val = parseFloat(document.getElementById('popup-input').value);
+  if (!val || val <= 0) { showToast('Masukkan amaun yang sah'); return; }
+  const arr = _popupType === 'masuk' ? masuk : keluar;
+  const current = parseFloat(arr[_popupIdx].amt || 0);
+  arr[_popupIdx].amt = (current + val).toFixed(2);
+  renderList(_popupType, arr);
+  updateTotals();
+  showToast('✓ +RM ' + val.toFixed(2) + ' ditambah');
+  closeAddPopup();
+}
+// Close popup if tap outside
+document.getElementById('add-popup').addEventListener('click', function(e) {
+  if (e.target === this) closeAddPopup();
+});
+
+// Fetch yuran dari kbttc-yuran
+async function fetchYuran(idx) {
+  const url = getUrl();
+  if (!url) { showToast('Sila masukkan URL Apps Script dahulu'); return; }
+  const btn = document.getElementById('yuran-fetch-btn');
+  if (btn) { btn.textContent = '…'; btn.disabled = true; }
+  try {
+    const res = await fetch(url + '?action=getYuran');
+    const data = await res.json();
+    if (data.success) {
+      masuk[idx].amt = data.yuran.toFixed(2);
+      renderList('masuk', masuk);
+      updateTotals();
+      showToast('✓ Kutipan yuran: RM ' + data.yuran.toFixed(2));
+    } else {
+      showToast('Ralat: ' + (data.error || 'Cuba semula'));
+      if (btn) { btn.textContent = '⟳'; btn.disabled = false; }
+    }
+  } catch(e) {
+    showToast('Gagal sambung. Semak URL & internet.');
+    if (btn) { btn.textContent = '⟳'; btn.disabled = false; }
+  }
 }
 
 // Google Sheets
