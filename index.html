@@ -922,16 +922,17 @@ document.getElementById('add-popup').addEventListener('click', function(e) {
 async function fetchYuran(idx) {
   const url = getUrl();
   if (!url) { showToast('Sila masukkan URL Apps Script dahulu'); return; }
+  const bulan = document.getElementById('bulan').value;
   const btn = document.getElementById('yuran-fetch-btn');
   if (btn) { btn.textContent = '…'; btn.disabled = true; }
   try {
-    const res = await fetch(url + '?action=getYuran');
+    const res = await fetch(url + '?action=getYuran&bulan=' + bulan);
     const data = await res.json();
     if (data.success) {
       masuk[idx].amt = data.yuran.toFixed(2);
       renderList('masuk', masuk);
       updateTotals();
-      showToast('✓ Kutipan yuran: RM ' + data.yuran.toFixed(2));
+      showToast('✓ Kutipan yuran ' + bulan + ': RM ' + data.yuran.toFixed(2));
     } else {
       showToast('Ralat: ' + (data.error || 'Cuba semula'));
       if (btn) { btn.textContent = '⟳'; btn.disabled = false; }
