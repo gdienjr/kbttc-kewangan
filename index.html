@@ -296,8 +296,8 @@ let masuk = [
 let keluar = [
   { label: 'Bil Letrik', amt: '' },
   { label: 'Bil Air', amt: '' },
-  { label: 'Belanja hadiah game', amt: '' },
-  { label: 'Bola game', amt: '' },
+  { label: 'Belanja hadiah game', amt: '', accumulate: true },
+  { label: 'Bola game', amt: '', accumulate: true },
 ];
 let tangan = [
   { nama: 'Sudin', amt: '', auto: true },
@@ -358,23 +358,60 @@ async function onMonthChange() {
   const url = getUrl();
   if (!url) return;
 
-  const prev = getPrevMonth(b, t);
+  // Cuba load data bulan yang dipilih dulu
+  setLoading(true);
   try {
-    const res = await fetch(`${url}?action=load&bulan=${prev.bulan}&tahun=${prev.tahun}`);
+    const res = await fetch(`${url}?action=load&bulan=${b}&tahun=${t}`);
     const data = await res.json();
-    if (data.success && data.masuk && data.masuk.length) {
-      // Cari baki dari sheet bulan lepas (simpan dalam Apps Script sebagai nilai BAKI)
+    if (data.success) {
+      if (data.masuk && data.masuk.length) masuk = data.masuk.map((m,i) => {
+        const flags = [{},{yuranLink:true},{accumulate:true},{accumulate:true},{accumulate:true}];
+        return Object.assign({}, flags[i] || {}, m);
+      });
+      if (data.keluar && data.keluar.length) keluar = data.keluar.map((k,i) => {
+        const flags = [{},{},{accumulate:true},{accumulate:true}];
+        return Object.assign({}, flags[i] || {}, k);
+      });
+      if (data.tangan && data.tangan.length) {
+        tangan = data.tangan.map((t,i) => {
+          if (i===0) return Object.assign({auto:true},t);
+          if (i===1) return Object.assign({fixed:true},t);
+          return t;
+        });
+      }
+      renderAll();
+      showToast('✓ Data ' + b + t + ' dimuatkan');
+    } else {
+      // Tiada data bulan ini — reset dan fetch baki bulan lepas untuk item 1
+      masuk = [
+        { label: 'Baki dari bulan lepas', amt: '' },
+        { label: 'Kutipan Yuran Bulan', amt: '', yuranLink: true },
+        { label: 'Tabung walk in', amt: '', accumulate: true },
+        { label: 'Sewa dewan', amt: '', accumulate: true },
+        { label: 'Yuran game', amt: '', accumulate: true },
+      ];
+      keluar = [
+        { label: 'Bil Letrik', amt: '' },
+        { label: 'Bil Air', amt: '' },
+        { label: 'Belanja hadiah game', amt: '', accumulate: true },
+        { label: 'Bola game', amt: '', accumulate: true },
+      ];
+      tangan = [
+        { nama: 'Sudin', amt: '', auto: true },
+        { nama: 'Sabri', amt: '214.65', fixed: true },
+      ];
+      renderAll();
+      const prev = getPrevMonth(b, t);
       const prevBaki = await fetchPrevBaki(url, prev.bulan, prev.tahun);
       if (prevBaki !== null) {
         masuk[0].amt = prevBaki.toFixed(2);
         renderList('masuk', masuk);
         updateTotals();
-        showToast('✓ Baki ' + prev.bulan + prev.tahun + ': RM ' + prevBaki.toFixed(2) + ' dimuatkan');
+        showToast('Baki ' + prev.bulan + prev.tahun + ': RM ' + prevBaki.toFixed(2) + ' — sedia untuk bulan baru');
       }
     }
-  } catch(e) {
-    // Senyap je kalau gagal — user boleh isi manual
-  }
+  } catch(e) {}
+  setLoading(false);
 }
 
 async function fetchPrevBaki(url, bulan, tahun) {
@@ -699,6 +736,63 @@ if (savedUrl) {
 }
 onMonthChange();
 renderAll();
+
+// Auto-load data bulan semasa bila buka webapp
+async function autoLoadOnOpen() {
+  const url = getUrl();
+  if (!url) return;
+  const bulan = document.getElementById('bulan').value;
+  const tahun = document.getElementById('tahun').value;
+  setLoading(true);
+  try {
+    const res = await fetch(`${url}?action=load&bulan=${bulan}&tahun=${tahun}`);
+    const data = await res.json();
+    if (data.success) {
+      if (data.masuk && data.masuk.length) masuk = data.masuk.map((m,i) => {
+        // Kekalkan flag yuranLink dan accumulate ikut index asal
+        const flags = [
+          {},
+          { yuranLink: true },
+          { accumulate: true },
+          { accumulate: true },
+          { accumulate: true },
+        ];
+        return Object.assign({}, flags[i] || {}, m);
+      });
+      if (data.keluar && data.keluar.length) keluar = data.keluar.map((k,i) => {
+        const flags = [
+          {},
+          {},
+          { accumulate: true },
+          { accumulate: true },
+        ];
+        return Object.assign({}, flags[i] || {}, k);
+      });
+      if (data.tangan && data.tangan.length) {
+        tangan = data.tangan.map((t,i) => {
+          if (i === 0) return Object.assign({ auto: true }, t);
+          if (i === 1) return Object.assign({ fixed: true }, t);
+          return t;
+        });
+      }
+      renderAll();
+      showToast('✓ Data ' + bulan + tahun + ' dimuatkan');
+    } else {
+      // Tiada data — cuba auto-fetch baki bulan lepas untuk item 1
+      const prev = getPrevMonth(bulan, tahun);
+      const prevBaki = await fetchPrevBaki(url, prev.bulan, prev.tahun);
+      if (prevBaki !== null) {
+        masuk[0].amt = prevBaki.toFixed(2);
+        renderList('masuk', masuk);
+        updateTotals();
+        showToast('Baki ' + prev.bulan + prev.tahun + ': RM ' + prevBaki.toFixed(2) + ' dimuatkan');
+      }
+    }
+  } catch(e) {}
+  setLoading(false);
+}
+
+if (savedUrl) autoLoadOnOpen();
 </script>
 </body>
 </html>
