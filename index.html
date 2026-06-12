@@ -162,6 +162,31 @@
   .cat-bar-fill { height: 100%; border-radius: 4px; }
   .cat-val { width: 70px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; color: var(--text-muted); }
 
+  /* Print styles for Annual Summary PDF */
+  @media print {
+    body * { visibility: hidden; }
+    #annual-modal, #annual-modal * { visibility: visible; }
+    #annual-modal {
+      position: absolute; inset: 0; background: white !important;
+      display: block !important; overflow: visible; padding: 0;
+    }
+    .annual-card { max-width: 100%; min-height: auto; box-shadow: none; }
+    .annual-header {
+      position: static; background: white !important; color: var(--text) !important;
+      border-bottom: 2px solid var(--green); padding: 0 0 12px;
+    }
+    .annual-header h2 { color: var(--text) !important; font-size: 18px; }
+    .annual-header button { display: none !important; }
+    .annual-body { padding: 16px 0; }
+    .summary-box, .cat-bar-track, .annual-table th, .annual-table tr.total-row td, .annual-table tr.no-data td {
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .chart-section { break-inside: avoid; }
+    .annual-table { break-inside: avoid; }
+    .annual-summary-grid { break-inside: avoid; }
+    @page { margin: 1.5cm; }
+  }
+
   /* Responsive */
   @media (min-width: 480px) {
     .bottom-bar { left: 50%; right: auto; width: 480px; transform: translateX(-50%); border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
@@ -306,7 +331,10 @@
   <div class="annual-card">
     <div class="annual-header">
       <h2 id="annual-title">Ringkasan Tahunan</h2>
-      <button class="modal-close" onclick="closeAnnualSummary()">✕</button>
+      <div style="display:flex; gap:8px;">
+        <button class="modal-close" onclick="printAnnualSummary()" title="Print / Simpan PDF" style="width:auto; padding:0 10px; font-size:13px; display:flex; align-items:center; gap:5px;">🖨 PDF</button>
+        <button class="modal-close" onclick="closeAnnualSummary()">✕</button>
+      </div>
     </div>
     <div class="annual-body" id="annual-body">
       <div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px;">Memuatkan data...</div>
@@ -635,6 +663,10 @@ async function openAnnualSummary() {
 
 function closeAnnualSummary() {
   document.getElementById('annual-modal').classList.remove('show');
+}
+
+function printAnnualSummary() {
+  window.print();
 }
 
 function renderAnnualSummary(data, tahun) {
